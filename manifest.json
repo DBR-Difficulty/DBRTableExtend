@@ -1,0 +1,19 @@
+{
+  "name": "DBRTableExtend",
+  "version": "1.0.0",
+  "manifest_version": 3,
+  "description": "DBR難易度表(イージー)の機能を拡張します",
+  "permissions": [],
+  "host_permissions": [
+    "https://dbr-difficulty.github.io/dbralle*.html"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://dbr-difficulty.github.io/dbralle*.html"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
