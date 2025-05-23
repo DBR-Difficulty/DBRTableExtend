@@ -521,44 +521,122 @@
 
       // ファイル選択後の処理
       input.addEventListener("change", () => {
-      const file = input.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function(event) {
-          try {
-            // ファイルの内容を JSON として読み込む
-            const json = JSON.parse(event.target.result);
-            const textageKeyObj = JSON.parse(localStorage.getItem("textageKey") || "{}");
-            // localStorage にデータごとに復元（lamp, bp, score） + textageKeyも紐づけて保存
-            ["lamp", "bp", "score"].forEach(type => {
-              if (json[type]) {
-                for (const [key, value] of Object.entries(json[type])) {
-                  localStorage.setItem(key, value);
+        const file = input.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function(event) {
+            try {
+              // ファイルの内容を JSON として読み込む
+              const json = JSON.parse(event.target.result);
+              const textageKeyObj = JSON.parse(localStorage.getItem("textageKey") || "{}");
 
-                  // 対応する textageKey を保存（存在すれば）
-                  const shortKey = key.replace(new RegExp("^" + type + "_"), "");
-                  if (json.textageKey && json.textageKey[shortKey]) {
-                    textageKeyObj[shortKey] = json.textageKey[shortKey];
+              // タイプ別の更新件数カウント
+              const updatedCounts = {
+                lamp: 0,
+                bp: 0,
+                score: 0
+              };
+
+              // localStorage にデータごとに復元（lamp, bp, score） + textageKeyも紐づけて保存
+              ["lamp", "bp", "score"].forEach(type => {
+                if (json[type]) {
+                  for (const [key, newValue] of Object.entries(json[type])) {
+                    const oldValue = localStorage.getItem(key);
+
+                    // 無効な newValue（null, undefined, 空文字など）は即スキップ
+                    if (typeof newValue !== "string" || newValue.trim() === "") {
+                      continue;
+                    }
+
+                    let shouldUpdate = false;
+
+                    // 比較して良い方だけを保存
+                    if (type === "lamp") {
+                      // ランプはlampOptionsのインデックスで比較（大きい方が良い）
+                      const isValidNew = lampOptions.includes(newValue);
+
+                      // 不正なランプ値はスキップ
+                      if (!isValidNew) {
+                        continue;
+                      }
+
+                      const oldIndex = lampOptions.indexOf(oldValue);
+                      const newIndex = lampOptions.indexOf(newValue);
+                      if (oldIndex === -1 || newIndex > oldIndex) {
+                        shouldUpdate = true;
+                      }
+
+                    } else if (type === "bp") {
+                      // BPは小さい方が良い（0以上の整数かつ"00"や"000"などは無効）
+                      const isDigits = /^\d+$/.test(newValue);
+                      const newNum = Number(newValue);
+                      const isValidNew = isDigits && Number.isInteger(newNum) && newNum >= 0 && newValue === String(newNum);
+
+                      if (!isValidNew) {
+                        continue;
+                      }
+
+                      const oldNum = Number(oldValue);
+                      const isValidOld = /^\d+$/.test(oldValue) && Number.isInteger(oldNum);
+
+                      if (!isValidOld || newNum < oldNum) {
+                        shouldUpdate = true;
+                      }
+                    } else if (type === "score") {
+                      // スコアは大きい方が良い（0以上の整数かつ"00"や"000"などは無効）
+                      const isDigits = /^\d+$/.test(newValue);
+                      const newNum = Number(newValue);
+                      const isValidNew = isDigits && Number.isInteger(newNum) && newNum >= 0 && newValue === String(newNum);
+
+                      if (!isValidNew) {
+                        continue;
+                      }
+
+                      const oldNum = Number(oldValue);
+                      const isValidOld = /^\d+$/.test(oldValue) && Number.isInteger(oldNum);
+
+                      if (!isValidOld || newNum > oldNum) {
+                        shouldUpdate = true;
+                      }
+                    }
+
+                    // この下に追加
+                    if (shouldUpdate) {
+                      localStorage.setItem(key, newValue);
+                      updatedCounts[type]++; // 各タイプごとにカウント
+                    }
+
+                    // textageKeyも更新（存在すれば）
+                    const shortKey = key.replace(new RegExp("^" + type + "_"), "");
+                    if (json.textageKey && json.textageKey[shortKey]) {
+                      textageKeyObj[shortKey] = json.textageKey[shortKey];
+                    }
                   }
                 }
-              }
-            });
-            // textageKey を上書き保存（存在すれば更新される）
-            localStorage.setItem("textageKey", JSON.stringify(textageKeyObj));
-            alert("インポートが成功しました！");
-            // ページをリロードして変更を反映させる
-            location.reload();
-          } catch (e) {
-            console.error("JSON解析またはインポート処理中のエラー:", e);
-            alert("インポート中にエラーが発生しました。");
-        }
-      };
-        reader.readAsText(file);
-      }
-    });
+              });
 
-    // ファイル選択ダイアログを表示
-    input.click();
+              localStorage.setItem("textageKey", JSON.stringify(textageKeyObj));
+              const message = "インポートが成功しました！\n\n" +
+              `ランプ：${updatedCounts.lamp} 件\n` +
+              `BP：${updatedCounts.bp} 件\n` +
+              `スコア：${updatedCounts.score} 件`;
+
+              // 成功メッセージ表示
+              alert(message);
+
+              // ページをリロードして変更を反映させる
+              location.reload();
+            } catch (e) {
+              console.error("JSON解析またはインポート処理中のエラー:", e);
+              alert("インポート中にエラーが発生しました。");
+            }
+          };
+          reader.readAsText(file);
+        }
+      });
+
+      // ファイル選択ダイアログを表示
+      input.click();
     });
   }
 

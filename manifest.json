@@ -1,6 +1,6 @@
 {
   "name": "DBRTableExtend",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "manifest_version": 3,
   "description": "DBR難易度表(イージー)の機能を拡張します",
   "icons": {
